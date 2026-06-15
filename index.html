@@ -52,24 +52,29 @@
     </div>
 </div>
 <script>
-    // Doğrudan güncel Türkiye akaryakıt fiyatlarını sunan alternatif açık kaynaklı API
-    const apiURL = "https://hasanadiguzel.com.tr";
+    // Tarayıcı güvenlik engellerini (CORS ve Mixed Content) aşmak için HTTPS ara sunucu eklendi
+    const targetURL = "http://hasanadiguzel.com.tr";
+    const proxyURL = "https://allorigins.win" + encodeURIComponent(targetURL);
 
+    // İnternet koparsa devreye girecek yedek fiyatlar
     let prices = { benzin: 62.99, motorin: 77.65 };
     let currentSelectedFuel = null;
 
     async function getPrices() {
         const statusEl = document.getElementById('status');
         try {
-            const response = await fetch(apiURL);
-            if (!response.ok) throw new Error("API yanıt vermedi");
+            // Güvenli proxy sunucusu üzerinden istek atıyoruz
+            const response = await fetch(proxyURL);
+            if (!response.ok) throw new Error("Proxy hatası");
             
-            const data = await response.json();
+            const rawData = await response.json();
+            // Gelen veriyi çözüyoruz
+            const data = JSON.parse(rawData.contents);
             
-            // API'den gelen İstanbul Avrupa yakası verilerini eşleştiriyoruz
             if (data && data.data && data.data[0]) {
                 const istanbulData = data.data[0]; 
                 
+                // Gelen fiyat verilerini sayıya dönüştürüp kaydediyoruz
                 prices.benzin = parseFloat(istanbulData.benzin) || prices.benzin;
                 prices.motorin = parseFloat(istanbulData.motorin) || prices.motorin;
                 
@@ -84,11 +89,11 @@
                     calc();
                 }
             } else {
-                throw new Error("Veri yapısı uyumsuz");
+                throw new Error("Veri yapısı okunamadı");
             }
         } catch (error) {
             console.error("Hata:", error);
-            // Bağlantı koparsa veya API çökerse B Planı yedek fiyatları yükle
+            // Hata durumunda yedek fiyatları ekrana bas
             document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
             document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
             statusEl.innerText = "● YEDEK MOD (İNTERNET HATASI)";
