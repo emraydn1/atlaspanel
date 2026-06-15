@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Atlas Otomatik Panel</title>
+    <link rel="apple-touch-icon" href="https://www.atlasfilo.com.tr">
+    <style>
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --accent: #ffcc00; --blue: #0062ff; --red: #ff4d4d; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .app { width: 92%; max-width: 400px; background: var(--card); padding: 25px; border-radius: 25px; border: 1px solid #333; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .header-status { text-align: right; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        .update-time { font-size: 11px; color: #888; font-weight: bold; }
+        h2 { color: var(--accent); text-align: center; font-size: 18px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; padding-left: 5px; }
+        button { cursor: pointer; touch-action: manipulation; -webkit-appearance: none; border: none; outline: none; }
+        .fuel-grid { display: flex; gap: 10px; margin-bottom: 20px; }
+        .f-btn { flex: 1; padding: 15px 5px; border-radius: 15px; border: 2px solid #333; background: #252525; color: white; transition: 0.2s; }
+        .f-btn b { display: block; font-size: 18px; color: var(--accent); margin-top: 5px; }
+        .f-btn.active { border-color: var(--accent); background: #332b00; border-width: 2px; }
+        input { width: 100%; padding: 15px; background: #252525; border: 1px solid #444; border-radius: 15px; color: white; font-size: 20px; box-sizing: border-box; margin-bottom: 15px; outline: none; }
+        .disc-grid { display: flex; gap: 10px; margin-bottom: 25px; }
+        .d-btn { flex: 1; padding: 15px; border-radius: 12px; background: var(--blue); color: white; font-weight: bold; font-size: 16px; box-shadow: 0 4px 0 #0044bb; }
+        .result-box { background: #000; padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #222; }
+        .final-val { font-size: 42px; color: var(--accent); font-weight: 800; }
+        .save-val { color: var(--red); margin-top: 8px; font-weight: 600; font-size: 16px; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header-status">
+        <div class="update-time" id="status">Veri Kontrol Ediliyor...</div>
+    </div>
+    <h2>GÜNCEL AKARYAKIT<br>POMPA FİYATI</h2>
+    <div class="fuel-grid">
+        <button class="f-btn" id="b-btn" onclick="selectFuel('benzin')">BENZİN <b id="p-benzin">62.99 ₺</b></button>
+        <button class="f-btn" id="m-btn" onclick="selectFuel('motorin')">MOTORİN <b id="p-motorin">77.65 ₺</b></button>
+    </div>
+    <label>Pompa Fiyatı (₺)</label>
+    <input type="number" id="p" placeholder="0.00" inputmode="decimal" oninput="calc()">
+    <label>İskonto Oranı (%)</label>
+    <input type="number" id="r" placeholder="%" step="0.01" inputmode="decimal" oninput="calc()">
+    <div class="disc-grid">
+        <button class="d-btn" onclick="setR(4.75)">% 4.75</button>
+        <button class="d-btn" onclick="setR(3.5)">% 3.5</button>
+    </div>
+    <div class="result-box">
+        <div style="color: #888; font-size: 11px; font-weight: 600; margin-bottom: 5px;">İNDİRİMLİ SATIŞ FİYATI</div>
+        <div class="final-val" id="res">0.00 ₺</div>
+        <div id="save" class="save-val">Litre İndirimi: 0.00 ₺</div>
+    </div>
+</div>
+<script>
+    // GÜNCEL GOOGLE URL'NİZ
+    const googleURL = "https://script.google.com/macros/s/AKfycbx1UAUz4RF9EHaieF_-6QvYkNLunRWG9EaSfCjKqfD81Sjgtd-XsmvjMCuPSwWc7xAU/exec";
+    
+    // Varsayılan Başlangıç Fiyatları (B Planı)
+    let prices = { benzin: 62.99, motorin: 77.65 };
+    let currentSelectedFuel = null;
+
+    async function getPrices() {
+        const statusEl = document.getElementById('status');
+        // Önbelleğe (Cache) takılmamak için URL sonuna benzersiz bir zaman damgası ekliyoruz
+        const cacheBusterUrl = googleURL + (googleURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+        
+        try {
+            // CORS ve Önbellek sorunlarını aşmak için 'no-cache' modu eklendi
+            const response = await fetch(cacheBusterUrl, { 
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache',
+                redirect: 'follow' 
+            });
+            const data = await response.json();
+            
+            if (data && (data.benzin || data.motorin)) {
+                // Gelen veride virgül varsa noktaya çevirip sayıya dönüştürüyoruz
+                prices.benzin = parseFloat(String(data.benzin).replace(',', '.')) || prices.benzin;
+                prices.motorin = parseFloat(String(data.motorin).replace(',', '.')) || prices.motorin;
+                
+                document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
+                document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
+                
+                statusEl.innerText = "● CANLI VERİ AKTİF";
+                statusEl.style.color = "#00ff00";
+
+                // Eğer kullanıcı fiyatlar yüklenmeden önce bir yakıt seçtiyse, kutucuktaki fiyatı canlı veriyle güncelle
+                if (currentSelectedFuel) {
+                    document.getElementById('p').value = prices[currentSelectedFuel];
+                    calc();
+                }
+            } else {
+                throw new Error("Veri formatı geçersiz");
+            }
+        } catch (error) {
+            console.error("Veri çekilemedi, varsayılanlar devrede:", error);
+            statusEl.innerText = "● ÇEVRİMDIŞI MOD / BAĞLANTI HATASI";
+            statusEl.style.color = "#ff4d4d";
+        }
+    }
+
+    function selectFuel(type) {
+        currentSelectedFuel = type;
+        document.getElementById('p').value = prices[type];
+        document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(type === 'benzin' ? 'b-btn' : 'm-btn').classList.add('active');
+        calc();
+    }
+
+    function setR(v) { document.getElementById('r').value = v; calc(); }
+
+    function calc() {
+        const p = parseFloat(document.getElementById('p').value) || 0;
+        const r = parseFloat(document.getElementById('r').value) || 0;
+        const s = (p * r) / 100;
+        const f = p - s;
+        document.getElementById('res').innerText = f.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + " ₺";
+        document.getElementById('save').innerText = "Litre İndirimi: " + s.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + " ₺";
+    }
+
+    document.addEventListener("touchstart", function(){}, true);
+    // Sayfa açıldığında fiyatları çek
+    getPrices();
+</script>
+</body>
+</html>
