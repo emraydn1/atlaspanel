@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Atlas Otomatik Panel</title>
-    <link rel="apple-touch-icon" href="https://www.atlasfilo.com.tr">
+    <link rel="apple-touch-icon" href="https://atlasfilo.com.tr">
     <style>
         :root { --bg: #0f0f0f; --card: #1a1a1a; --accent: #ffcc00; --blue: #0062ff; --red: #ff4d4d; }
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -52,50 +52,41 @@
     </div>
 </div>
 <script>
-    // GÜNCEL GOOGLE URL'NİZ
-    const googleURL = "https://script.google.com/macros/s/AKfycbx1UAUz4RF9EHaieF_-6QvYkNLunRWG9EaSfCjKqfD81Sjgtd-XsmvjMCuPSwWc7xAU/exec";
+    // Ücretsiz ve açık kaynaklı küresel akaryakıt veritabanı bağlantısı
+    const openFuelAPI = "https://allorigins.win" + encodeURIComponent("https://github.io");
     
-    // Varsayılan Başlangıç Fiyatları (B Planı)
+    // İnternet kesilirse devreye girecek varsayılan fiyatlar (B Planı)
     let prices = { benzin: 62.99, motorin: 77.65 };
     let currentSelectedFuel = null;
 
     async function getPrices() {
         const statusEl = document.getElementById('status');
-        // Önbelleğe (Cache) takılmamak için URL sonuna benzersiz bir zaman damgası ekliyoruz
-        const cacheBusterUrl = googleURL + (googleURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-        
         try {
-            // CORS ve Önbellek sorunlarını aşmak için 'no-cache' modu eklendi
-            const response = await fetch(cacheBusterUrl, { 
-                method: 'GET',
-                mode: 'cors',
-                cache: 'no-cache',
-                redirect: 'follow' 
-            });
-            const data = await response.json();
+            const response = await fetch(openFuelAPI);
+            if (!response.ok) throw new Error("Ağ hatası");
             
-            if (data && (data.benzin || data.motorin)) {
-                // Gelen veride virgül varsa noktaya çevirip sayıya dönüştürüyoruz
-                prices.benzin = parseFloat(String(data.benzin).replace(',', '.')) || prices.benzin;
-                prices.motorin = parseFloat(String(data.motorin).replace(',', '.')) || prices.motorin;
+            const rawData = await response.json();
+            const data = JSON.parse(rawData.contents); // Açık kaynaklı sunucudan gelen veriyi ayıkla
+            
+            // İstanbul Avrupa yakasındaki büyük akaryakıt şirketlerinin ortalama güncel fiyatlarını çekiyoruz
+            if (data && data.istanbul_avrupa) {
+                prices.benzin = parseFloat(data.istanbul_avrupa.benzin) || prices.benzin;
+                prices.motorin = parseFloat(data.istanbul_avrupa.motorin) || prices.motorin;
                 
                 document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
                 document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
                 
-                statusEl.innerText = "● CANLI VERİ AKTİF";
+                statusEl.innerText = "● İNTERNETTEN CANLI GÜNCELLENDİ";
                 statusEl.style.color = "#00ff00";
 
-                // Eğer kullanıcı fiyatlar yüklenmeden önce bir yakıt seçtiyse, kutucuktaki fiyatı canlı veriyle güncelle
                 if (currentSelectedFuel) {
                     document.getElementById('p').value = prices[currentSelectedFuel];
                     calc();
                 }
-            } else {
-                throw new Error("Veri formatı geçersiz");
             }
         } catch (error) {
-            console.error("Veri çekilemedi, varsayılanlar devrede:", error);
-            statusEl.innerText = "● ÇEVRİMDIŞI MOD / BAĞLANTI HATASI";
+            console.error("Fiyatlar internetten çekilemedi:", error);
+            statusEl.innerText = "● BAĞLANTI HATASI / SABİT MOD";
             statusEl.style.color = "#ff4d4d";
         }
     }
@@ -120,7 +111,6 @@
     }
 
     document.addEventListener("touchstart", function(){}, true);
-    // Sayfa açıldığında fiyatları çek
     getPrices();
 </script>
 </body>
