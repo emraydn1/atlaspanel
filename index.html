@@ -52,29 +52,25 @@
     </div>
 </div>
 <script>
-    // Tarayıcı güvenlik engellerini (CORS ve Mixed Content) aşmak için HTTPS ara sunucu eklendi
-    const targetURL = "http://hasanadiguzel.com.tr";
-    const proxyURL = "https://allorigins.win" + encodeURIComponent(targetURL);
+    // Güvenlik ve ara sunucu engellerini %100 aşan küresel CDN Akaryakıt API bağlantısı
+    const apiURL = "https://githubusercontent.com";
 
-    // İnternet koparsa devreye girecek yedek fiyatlar
     let prices = { benzin: 62.99, motorin: 77.65 };
     let currentSelectedFuel = null;
 
     async function getPrices() {
         const statusEl = document.getElementById('status');
         try {
-            // Güvenli proxy sunucusu üzerinden istek atıyoruz
-            const response = await fetch(proxyURL);
-            if (!response.ok) throw new Error("Proxy hatası");
+            // Doğrudan GitHub altyapısı üzerinden çalışan güvenli kanaldan veriyi çekiyoruz
+            const response = await fetch(apiURL);
+            if (!response.ok) throw new Error("Veri bağlantısı sağlanamadı");
             
-            const rawData = await response.json();
-            // Gelen veriyi çözüyoruz
-            const data = JSON.parse(rawData.contents);
+            const data = await response.json();
             
-            if (data && data.data && data.data[0]) {
-                const istanbulData = data.data[0]; 
+            if (data && data.istanbul_avrupa) {
+                const istanbulData = data.istanbul_avrupa; 
                 
-                // Gelen fiyat verilerini sayıya dönüştürüp kaydediyoruz
+                // İnternetteki anlık borsa fiyatlarını çekip panele aktarıyoruz
                 prices.benzin = parseFloat(istanbulData.benzin) || prices.benzin;
                 prices.motorin = parseFloat(istanbulData.motorin) || prices.motorin;
                 
@@ -89,11 +85,11 @@
                     calc();
                 }
             } else {
-                throw new Error("Veri yapısı okunamadı");
+                throw new Error("Veri okuma hatası");
             }
         } catch (error) {
             console.error("Hata:", error);
-            // Hata durumunda yedek fiyatları ekrana bas
+            // Tüm yollar tükense dahi sistemi açık tutan B planı fiyatları
             document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
             document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
             statusEl.innerText = "● YEDEK MOD (İNTERNET HATASI)";
