@@ -34,8 +34,8 @@
     </div>
     <h2>GÜNCEL AKARYAKIT<br>POMPA FİYATI</h2>
     <div class="fuel-grid">
-        <button class="f-btn" id="b-btn" onclick="selectFuel('benzin')">BENZİN <b id="p-benzin">62.99 ₺</b></button>
-        <button class="f-btn" id="m-btn" onclick="selectFuel('motorin')">MOTORİN <b id="p-motorin">77.65 ₺</b></button>
+        <button class="f-btn" id="b-btn" onclick="selectFuel('benzin')">BENZİN <b id="p-benzin">--.-- ₺</b></button>
+        <button class="f-btn" id="m-btn" onclick="selectFuel('motorin')">MOTORİN <b id="p-motorin">--.-- ₺</b></button>
     </div>
     <label>Pompa Fiyatı (₺)</label>
     <input type="number" id="p" placeholder="0.00" inputmode="decimal" oninput="calc()">
@@ -52,26 +52,26 @@
     </div>
 </div>
 <script>
-    // Ücretsiz ve açık kaynaklı küresel akaryakıt veritabanı bağlantısı
-    const openFuelAPI = "https://allorigins.win" + encodeURIComponent("https://github.io");
-    
-    // İnternet kesilirse devreye girecek varsayılan fiyatlar (B Planı)
+    // Doğrudan güncel Türkiye akaryakıt fiyatlarını sunan alternatif açık kaynaklı API
+    const apiURL = "https://hasanadiguzel.com.tr";
+
     let prices = { benzin: 62.99, motorin: 77.65 };
     let currentSelectedFuel = null;
 
     async function getPrices() {
         const statusEl = document.getElementById('status');
         try {
-            const response = await fetch(openFuelAPI);
-            if (!response.ok) throw new Error("Ağ hatası");
+            const response = await fetch(apiURL);
+            if (!response.ok) throw new Error("API yanıt vermedi");
             
-            const rawData = await response.json();
-            const data = JSON.parse(rawData.contents); // Açık kaynaklı sunucudan gelen veriyi ayıkla
+            const data = await response.json();
             
-            // İstanbul Avrupa yakasındaki büyük akaryakıt şirketlerinin ortalama güncel fiyatlarını çekiyoruz
-            if (data && data.istanbul_avrupa) {
-                prices.benzin = parseFloat(data.istanbul_avrupa.benzin) || prices.benzin;
-                prices.motorin = parseFloat(data.istanbul_avrupa.motorin) || prices.motorin;
+            // API'den gelen İstanbul Avrupa yakası verilerini eşleştiriyoruz
+            if (data && data.data && data.data[0]) {
+                const istanbulData = data.data[0]; 
+                
+                prices.benzin = parseFloat(istanbulData.benzin) || prices.benzin;
+                prices.motorin = parseFloat(istanbulData.motorin) || prices.motorin;
                 
                 document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
                 document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
@@ -83,10 +83,15 @@
                     document.getElementById('p').value = prices[currentSelectedFuel];
                     calc();
                 }
+            } else {
+                throw new Error("Veri yapısı uyumsuz");
             }
         } catch (error) {
-            console.error("Fiyatlar internetten çekilemedi:", error);
-            statusEl.innerText = "● BAĞLANTI HATASI / SABİT MOD";
+            console.error("Hata:", error);
+            // Bağlantı koparsa veya API çökerse B Planı yedek fiyatları yükle
+            document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
+            document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
+            statusEl.innerText = "● YEDEK MOD (İNTERNET HATASI)";
             statusEl.style.color = "#ff4d4d";
         }
     }
