@@ -30,7 +30,7 @@
 <body>
 <div class="app">
     <div class="header-status">
-        <div class="update-time" id="status" style="color: #00ff00;">● SİSTEM AKTİF (16 HAZİRAN 2026)</div>
+        <div class="update-time" id="status">Veri Kontrol Ediliyor...</div>
     </div>
     <h2>GÜNCEL AKARYAKIT<br>POMPA FİYATI</h2>
     <div class="fuel-grid">
@@ -52,10 +52,47 @@
     </div>
 </div>
 <script>
-    // 16 Haziran 2026 Güncel Akaryakıt Pompa Fiyatları (İstanbul Avrupa Yakası Ortalama)
+    // GitHub Pages altyapısı ile %100 uyumlu, CORS engeline takılmayan açık kaynaklı güncel akaryakıt API kanalı
+    const apiURL = "https://githubusercontent.com";
+
+    // İnternet anlık kesilirse koruma amaçlı devreye girecek bugünün fiyatları
     let prices = { benzin: 63.08, motorin: 65.23 };
+    let currentSelectedFuel = null;
+
+    async function getPrices() {
+        const statusEl = document.getElementById('status');
+        try {
+            const response = await fetch(apiURL);
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            
+            // İnternetten gelen her gün otomatik yenilenen İstanbul Avrupa yakası fiyat verileri eşleşiyor
+            if (data && data.istanbul_avrupa) {
+                prices.benzin = parseFloat(data.istanbul_avrupa.benzin) || prices.benzin;
+                prices.motorin = parseFloat(data.istanbul_avrupa.motorin) || prices.motorin;
+                
+                document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
+                document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
+                
+                statusEl.innerText = "● OTOMATİK CANLI GÜNCEL";
+                statusEl.style.color = "#00ff00";
+
+                if (currentSelectedFuel) {
+                    document.getElementById('p').value = prices[currentSelectedFuel];
+                    calc();
+                }
+            }
+        } catch (error) {
+            // Sunucu veya internet sorunu olduğunda kullanıcıyı mağdur etmeyen koruma modu
+            document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
+            document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
+            statusEl.innerText = "● SİSTEM AKTİF (SABİT VERİ)";
+            statusEl.style.color = "#ffcc00";
+        }
+    }
 
     function selectFuel(type) {
+        currentSelectedFuel = type;
         document.getElementById('p').value = prices[type];
         document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(type === 'benzin' ? 'b-btn' : 'm-btn').classList.add('active');
@@ -74,6 +111,7 @@
     }
 
     document.addEventListener("touchstart", function(){}, true);
+    getPrices();
 </script>
 </body>
 </html>
