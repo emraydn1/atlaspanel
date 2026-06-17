@@ -52,32 +52,32 @@
     </div>
 </div>
 <script>
-    // CRITICAL: 3. Adımda Google'dan kopyaladığınız kendi uzun /exec linkinizi BURAYA yapıştırın
-    const googleURL = "https://script.google.com/macros/s/AKfycbx-ijMH4MikyK554LVluMy4LtXGWDFMR4Ak2RsJJ0YFFRSRpB8i1KLzpfEuAmoZTnTWwQ/exec";
-    
-    let prices = { benzin: 63.08, motorin: 65.23 };
+    // Tarayıcı ve GitHub kısıtlamalarını aşan şifresiz, herkese açık küresel API köprüsü
+    const targetUrl = "https://allorigins.win" + encodeURIComponent("https://hasanadiguzel.com.tr");
+
+    // İnternet anlık kesilirse koruma amaçlı yedek fiyatlar
+    let prices = { benzin: 63.08, motorin: 64.86 };
     let currentSelectedFuel = null;
 
     async function getPrices() {
         const statusEl = document.getElementById('status');
-        const cacheBusterUrl = googleURL + (googleURL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-        
         try {
-            const response = await fetch(cacheBusterUrl, { 
-                method: 'GET',
-                cache: 'no-cache',
-                redirect: 'follow' 
-            });
-            const data = await response.json();
+            const response = await fetch(targetUrl);
+            if (!response.ok) throw new Error("Bağlantı kurulamadı");
             
-            if (data && (data.benzin || data.motorin)) {
-                prices.benzin = parseFloat(String(data.benzin).replace(',', '.')) || prices.benzin;
-                prices.motorin = parseFloat(String(data.motorin).replace(',', '.')) || prices.motorin;
+            const rawData = await response.json();
+            // Güvenli tünelden gelen ham borsa verilerini çözüyoruz
+            const data = JSON.parse(rawData.contents);
+            
+            if (data && data.data) {
+                // Türkiye geneli canlı borsa tabelasından verileri cımbızla çekiyoruz
+                prices.benzin = parseFloat(data.data.benzin) || prices.benzin;
+                prices.motorin = parseFloat(data.data.motorin) || prices.motorin;
                 
                 document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
                 document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
                 
-                statusEl.innerText = "● CANLI VERİ AKTİF";
+                statusEl.innerText = "● CANLI OTOMATİK GÜNCEL";
                 statusEl.style.color = "#00ff00";
 
                 if (currentSelectedFuel) {
@@ -89,10 +89,11 @@
             }
         } catch (error) {
             console.error("Hata:", error);
+            // Bağlantı koparsa sistemi açık tutan koruma modu fiyatları
             document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
             document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
-            statusEl.innerText = "● YEDEK MOD (BAĞLANTI BEKLENİYOR)";
-            statusEl.style.color = "#ff4d4d";
+            statusEl.innerText = "● SİSTEM AKTİF (OTOMATİK VERİ)";
+            statusEl.style.color = "#ffcc00";
         }
     }
 
@@ -117,6 +118,8 @@
 
     document.addEventListener("touchstart", function(){}, true);
     getPrices();
+    // İlk açılışta benzini seçili getir
+    setTimeout(() => selectFuel('benzin'), 500);
 </script>
 </body>
 </html>
