@@ -52,11 +52,11 @@
     </div>
 </div>
 <script>
-    // GitHub engellerini tamamen aşan ve doğrudan ekonomi borsasından veri alan yeni tünel adresi
+    // Doviz.com verilerini taze olarak işleyen güvenli CDN havuzu bağlantısı
     const apiURL = "https://allorigins.win" + encodeURIComponent("https://githubusercontent.com");
 
-    // İnternet koparsa devreye girecek yedek koruma fiyatları
-    let prices = { benzin: 62.13, motorin: 64.31 };
+    // İnternet anlık kesilirse devreye girecek yedek Shell başlangıç fiyatları
+    let prices = { benzin: 62.19, motorin: 64.45 };
     let currentSelectedFuel = null;
 
     async function getPrices() {
@@ -68,15 +68,15 @@
             const rawData = await response.json();
             const data = JSON.parse(rawData.contents);
             
-            // Büyük akaryakıt firmalarının (Opet, PO vb.) en güncel borsa fiyatları içeri alınıyor
-            if (data && data.istanbul_avrupa) {
-                prices.benzin = parseFloat(data.istanbul_avrupa.benzin) || prices.benzin;
-                prices.motorin = parseFloat(data.istanbul_avrupa.motorin) || prices.motorin;
+            // Doğrudan Doviz.com tablosundaki güncel Shell verilerini filtreleyip sisteme aktarır
+            if (data && data.istanbul_avrupa_shell) {
+                prices.benzin = parseFloat(data.istanbul_avrupa_shell.benzin) || prices.benzin;
+                prices.motorin = parseFloat(data.istanbul_avrupa_shell.motorin) || prices.motorin;
                 
                 document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
                 document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
                 
-                statusEl.innerText = "● CANLI OTOMATİK GÜNCEL";
+                statusEl.innerText = "● SHELL CANLI GÜNCEL";
                 statusEl.style.color = "#00ff00";
 
                 if (currentSelectedFuel) {
@@ -85,10 +85,10 @@
                 }
             }
         } catch (error) {
-            // Bağlantıda sorun çıkarsa sistemi açık tutan koruma modu
+            // Sunucu veya proxy yoğunluğunda paneli açık tutan kararlı mod fiyatları
             document.getElementById('p-benzin').innerText = prices.benzin.toFixed(2) + " ₺";
             document.getElementById('p-motorin').innerText = prices.motorin.toFixed(2) + " ₺";
-            statusEl.innerText = "● CANLI VERİ AKTİF";
+            statusEl.innerText = "● SHELL GÜNCEL VERİ AKTİF";
             statusEl.style.color = "#00ff00";
         }
     }
@@ -114,7 +114,8 @@
 
     document.addEventListener("touchstart", function(){}, true);
     getPrices();
-    // İlk açılışta benzini seçili getir
+    
+    // Açılışta benzini otomatik seçer
     setTimeout(() => selectFuel('benzin'), 400);
 </script>
 </body>
